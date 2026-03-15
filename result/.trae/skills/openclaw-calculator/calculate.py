@@ -29,10 +29,8 @@ def calculate_settlement(file_path):
         df['外包结算单价'] = df['单项结算金额单价'] * OUTSOURCING_RATIO
         df['外包结算金额'] = df['施工量'] * df['外包结算单价']
         df['外包结算金额31%'] = df['外包结算金额'] * ENGINEERING_RATIO
-        # 计算外包结算金额30%
-        df['外包结算金额30%'] = df['外包结算金额'] * 0.3
         df['本次外包结算比例'] = CURRENT_OUTSOURCING_RATIO
-        df['本次外包结算金额'] = df['外包结算金额30%'] * CURRENT_OUTSOURCING_RATIO
+        df['本次外包结算金额'] = df['外包结算金额'] * 0.3 * CURRENT_OUTSOURCING_RATIO
         df['外包已结算金额'] = 0.00
         df['外包结算剩余金额'] = df['外包结算金额31%'] - df['本次外包结算金额'] - df['外包已结算金额']
         
@@ -43,6 +41,22 @@ def calculate_settlement(file_path):
             return (row['工程结算金额31%'] - row['外包结算金额31%']) / row['工程结算金额31%']
         
         df['利润率比例'] = df.apply(calculate_profit_margin, axis=1)
+        
+        # 计算指定列的总和
+        sum_columns = ['单项结算金额', '工程结算金额31%', '外包结算金额', '外包结算金额31%', '本次外包结算金额', '外包已结算金额', '外包结算剩余金额']
+        
+        # 创建总和行
+        sum_row = pd.Series(index=df.columns, name='总计')
+        
+        # 计算各列的总和
+        for col in sum_columns:
+            if col in df.columns:
+                sum_row[col] = df[col].sum()
+        
+        # 将总和行添加到DataFrame末尾
+        # df = df.append(sum_row, ignore_index=True)
+        sum_row_df = pd.DataFrame([sum_row])
+        df = pd.concat([df, sum_row_df], ignore_index=True)
         
         # 保存计算结果
         output_file = file_path.replace('.xlsx', '_calculated.xlsx')
