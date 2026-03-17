@@ -737,16 +737,45 @@ def extract_data_from_sheet(df, sheet_name):
     print(f"'钉钉编号' not found in sheet {sheet_name}")
     return None
 
-def main():
+def main(input_folder=None):
     """主函数"""
     print("=" * 60)
     print("开始处理结算数据")
     print("=" * 60)
-    print(f"File: {file_path}")
     
-    if not os.path.exists(file_path):
-        print(f"错误: 文件 {file_path} 不存在")
+    # 如果没有传入文件夹，使用当前目录
+    if input_folder is None:
+        input_folder = os.getcwd()
+    
+    print(f"工作目录: {input_folder}")
+    
+    # 在文件夹中查找文件
+    global file_path, attachment_file
+    
+    # 查找外包结算单测试模版文件
+    found_settlement = False
+    found_attachment = False
+    
+    for filename in os.listdir(input_folder):
+        # 跳过临时文件（以~$开头）
+        if filename.startswith('~$'):
+            continue
+        
+        if '外包结算单测试模版' in filename and filename.endswith('.xlsx'):
+            file_path = os.path.join(input_folder, filename)
+            found_settlement = True
+            print(f"找到外包结算单文件: {file_path}")
+        elif '附件五' in filename and filename.endswith('.xlsx'):
+            attachment_file = os.path.join(input_folder, filename)
+            found_attachment = True
+            print(f"找到附件五文件: {attachment_file}")
+    
+    if not found_settlement:
+        print(f"错误: 在目录 {input_folder} 中未找到外包结算单测试模版.xlsx文件")
         return
+    
+    if not found_attachment:
+        print(f"警告: 在目录 {input_folder} 中未找到附件五文件，部分功能可能不可用")
     
     try:
         # 读取附件五数据
@@ -778,14 +807,14 @@ def main():
         # 保存所有提取的数据到Excel文件
         if all_extracted_data:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = f"外包结算单测试模版_extracted_{timestamp}.xlsx"
+            output_file = os.path.join(input_folder, f"外包结算单测试模版_extracted_{timestamp}.xlsx")
             if save_to_excel_with_openpyxl(all_extracted_data, output_file):
                 print(f"\nAll sheets processed. Final output file: {output_file}")
             else:
                 print("\n文件保存失败")
             
             # 保存模板文件（只包含标题行）
-            template_file = f"外包结算单测试模版_template_{timestamp}.xlsx"
+            template_file = os.path.join(input_folder, f"外包结算单测试模版_template_{timestamp}.xlsx")
             if save_template_only(all_extracted_data, template_file, attachment_data):
                 print(f"\nTemplate file created: {template_file}")
             else:
@@ -803,4 +832,14 @@ def main():
     print("=" * 60)
 
 if __name__ == "__main__":
-    main()
+    import sys
+    
+    # 检查是否有传入的文件夹路径参数
+    if len(sys.argv) > 1:
+        input_folder = sys.argv[1]
+        if os.path.isdir(input_folder):
+            main(input_folder)
+        else:
+            print(f"错误: {input_folder} 不是一个有效的目录")
+    else:
+        main()
